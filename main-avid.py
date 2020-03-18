@@ -127,7 +127,6 @@ def main_worker(gpu, ngpus_per_node, args, cfg):
                 ckp_manager.save(epoch, model=model, train_criterion=train_criterion, optimizer=optimizer, filename='checkpoint-ep{}.pth.tar'.format(epoch))
             if args.distributed:
                 train_loader.sampler.set_epoch(epoch)
-            scheduler.step(epoch)
             train_criterion.set_epoch(epoch)
 
             # Train for one epoch
@@ -136,6 +135,9 @@ def main_worker(gpu, ngpus_per_node, args, cfg):
             run_phase('train', train_loader, model, optimizer, train_criterion, epoch, args, cfg, logger, tb_writter)
             if epoch % test_freq == 0 or epoch == end_epoch - 1:
                 ckp_manager.save(epoch+1, model=model, optimizer=optimizer, train_criterion=train_criterion)
+            
+            # PyTorch >= 1.1, scheduler step is called *after* optimizer step
+            scheduler.step(epoch)
 
 
 def run_phase(phase, loader, model, optimizer, criterion, epoch, args, cfg, logger, tb_writter):
