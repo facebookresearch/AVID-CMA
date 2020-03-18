@@ -1,0 +1,68 @@
+required_devices: 8
+resume: false
+
+no_test: false
+test_only: false
+debug: false
+seed: 0
+distributed: false
+test_freq: 1
+num_workers: 32
+
+benchmark:
+  name: "kinetics-linear-8at16"
+
+dataset:
+  name: "kinetics"
+  num_folds: 1
+  batch_size: 64
+  clip_duration: 1.
+  video_fps: 16.
+  crop_size: 112
+  resize: 128
+  transform: 'crop+color'
+  color: [0., 0., 0.]
+  train:
+    split: "train"
+    mode: "clip"
+    clips_per_video: 1
+    time_scale_max_ratio: 1
+    use_augmentation: true
+    use_shuffle: true
+    drop_last: true
+  test:
+    split: "val"
+    mode: "clip"
+    clips_per_video: 1
+    time_scale_max_ratio: 1
+    use_augmentation: false
+    use_shuffle: false
+    drop_last: false
+  test_dense:
+    split: "val"
+    mode: "video"
+    clips_per_video: 25
+    time_scale_max_ratio: 1
+    use_augmentation: false
+    use_shuffle: false
+    drop_last: false
+
+optimizer:
+  name: "adam"
+  num_epochs: 20
+  weight_decay: 0.0
+  warmup_classifier: true
+  lr:
+    name: "multistep"
+    base_lr: 0.0001
+    gamma: 0.3
+    milestones: [8, 12, 15, 18]
+
+model:
+  name: "MOSTWrapper"
+  args:
+    n_classes: 400
+    feat_names: ["conv1", "conv2x", "conv3x", "conv4x", "conv5x", "pool"]
+    pooling_ops: ["AdaptiveMaxPool3d((1, 12, 12))", "AdaptiveMaxPool3d((1, 12, 12))", "AdaptiveMaxPool3d((1, 8, 8))", "AdaptiveMaxPool3d((1, 6, 6))", "AdaptiveMaxPool3d((1, 4, 4))", null]
+    feat_dims: [9216, 9216, 8192, 9216, 8192, 512]
+    use_bn: true

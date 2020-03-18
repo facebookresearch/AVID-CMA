@@ -1,0 +1,51 @@
+required_devices: 1
+resume: false
+
+# defaults
+no_test: false
+test_only: false
+debug: false
+seed: 0
+distributed: false
+test_freq: 1
+num_workers: 10
+
+benchmark:
+  name: "esc50"
+
+dataset:
+  name: "esc50"
+  n_folds: 5
+  batch_size: 64
+  clip_duration: 2.
+  audio_fps: 24000.
+  spectrogram_fps: 50.
+  n_fft: 256
+  train:
+    split: "train-{fold}"
+    mode: "clip"
+    clips_per_video: 10
+    use_augmentation: true
+    use_shuffle: true
+    drop_last: false
+  test:
+    split: "test-{fold}"
+    mode: "clip"
+    clips_per_video: 1
+    use_augmentation: false
+    use_shuffle: false
+    drop_last: false
+  test_dense:
+    split: "test-{fold}"
+    mode: "video"
+    clips_per_video: 10
+    use_augmentation: false
+    use_shuffle: false
+    drop_last: false
+
+model:
+  name: "lreg_classifier"
+  n_classes: 50
+  feat_names: ["block4", "block3", "block2", "block1"]
+  pooling_ops: ["AdaptiveAvgPool2d((4, 4))", "AdaptiveAvgPool2d((6, 6))", "AdaptiveAvgPool2d((8, 8))", "AdaptiveAvgPool2d((12, 12))"]
+  C: 1.0
