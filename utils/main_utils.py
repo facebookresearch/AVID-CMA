@@ -379,57 +379,6 @@ def build_dataloaders(cfg, num_workers, distributed, logger):
     return train_loader
 
 
-# class CheckpointManager(object):
-#     def __init__(self, checkpoint_dir, rank=0):
-#         self.checkpoint_dir = checkpoint_dir
-#         self.rank = rank
-#         self.best_metric = 0.
-#
-#     def save(self, model, optimizer, epoch, eval_metric=0., other=None):
-#         if self.rank != 0:
-#             return
-#
-#         is_best = False
-#         if eval_metric > self.best_metric:
-#             self.best_metric = eval_metric
-#             is_best = True
-#
-#         state = {
-#             'epoch': epoch,
-#             'state_dict': model.state_dict(),
-#             'optimizer': optimizer.state_dict(),
-#         }
-#         if other is not None:
-#             state.update(other)
-#         save_checkpoint(state=state, is_best=is_best, model_dir=self.checkpoint_dir)
-#
-#     def last_checkpoint_fn(self):
-#         return '{}/checkpoint.pth.tar'.format(self.checkpoint_dir)
-#
-#     def best_checkpoint_fn(self):
-#         return '{}/model_best.pth.tar'.format(self.checkpoint_dir)
-#
-#     def checkpoint_fn(self, last=False, best=False):
-#         assert best or last
-#         assert not (last and best)
-#         if last:
-#             return self.last_checkpoint_fn()
-#         if best:
-#             return self.best_checkpoint_fn()
-#
-#     def checkpoint_exists(self, last=False, best=False):
-#         return os.path.isfile(self.checkpoint_fn(last, best))
-#
-#     def restore(self, model, optimizer=None, restore_last=False, restore_best=False):
-#         checkpoint_fn = self.checkpoint_fn(restore_last, restore_best)
-#         ckp = torch.load(checkpoint_fn, map_location={'cuda:0': 'cpu'})
-#         start_epoch = ckp['epoch']
-#         model.load_state_dict(ckp['state_dict'])
-#         if optimizer is not None:
-#             optimizer.load_state_dict(ckp['optimizer'])
-#         return start_epoch
-
-
 class CheckpointManager(object):
     def __init__(self, checkpoint_dir, rank=0):
         self.checkpoint_dir = checkpoint_dir

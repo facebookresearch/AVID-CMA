@@ -38,14 +38,8 @@ class VideoDataset(data.Dataset):
                  mode='clip',
                  clips_per_video=1,
                  max_offsync_augm=0,
-                 time_scale_max_ratio=1,
                  time_lims=None,
                  missing_audio_as_zero=False,
-                 return_nneig=False,
-                 nneigs_cutoff=10,
-                 nneigs_fn=None,
-                 return_signatures=False,
-                 signatures_fns=None
                  ):
         super(VideoDataset, self).__init__()
 
@@ -81,28 +75,9 @@ class VideoDataset(data.Dataset):
         self.clips_per_video = clips_per_video
         self.time_lims = np.array(time_lims)     # (Video SS, Video FF, Audio SS, Audio FF)
         self.missing_audio_as_zero = missing_audio_as_zero
-        self.time_scale_max_ratio = time_scale_max_ratio
         self.mode = mode
 
-        self.return_nneig = return_nneig
-        self.nneigs_fn = nneigs_fn
-        self.nneigs_cutoff = nneigs_cutoff
-        self.nneigs = None
-
-        self.return_signatures = return_signatures
-        if return_signatures:
-            self.signatures_fns = signatures_fns
-            self.signatures = {s: scipy.sparse.load_npz(signatures_fns[s]) for s in signatures_fns}
-
-        self.chunk_index = None
-
-    def chunk_dataset(self, init, end):
-        self.chunk_index = list(range(init, end))
-
     def __getitem__(self, index):
-        if self.chunk_index is not None:
-            index = self.chunk_index[index]
-
         if self.mode == 'clip':
             try:
                 sample_idx = index % self.time_lims.shape[0]
@@ -110,20 +85,6 @@ class VideoDataset(data.Dataset):
                 sample = self.get_clip(int(sample_idx), video_start_time, audio_start_time, video_clip_duration=video_duration, audio_clip_duration=audio_duration)
                 if sample is None:
                     return self[(index+1) % len(self)]
-
-                if self.return_nneig:
-                    if self.nneigs is not None:
-                        nneig_index = random.sample(range(self.nneigs_cutoff), 1)[0]
-                        nneig_index = self.nneigs[index, nneig_index]
-                    else:
-                        nneig_index = index
-
-                    video_start_time, video_duration, audio_start_time, audio_duration = self.sample_snippet(nneig_index)
-                    nneig_sample = self.get_clip(int(sample_idx), video_start_time, audio_start_time, video_clip_duration=video_duration, audio_clip_duration=audio_duration)
-                    if nneig_sample is None:
-                        return self[(index + 1) % len(self)]
-
-                    sample.update({'nneig_'+k: nneig_sample[k] for k in nneig_sample})
 
                 return sample
             except Exception:
@@ -151,7 +112,8 @@ class VideoDataset(data.Dataset):
                     chunks['frames'] = torch.stack([sample['frames'] for _ in range(self.clips_per_video)])
                 else:
                     chunks['frames'] = torch.stack([sample['frames'][:, ss:ss+chunk_size]
-                                                    for ss in np.linspace(0, max(nf-chunk_size, 1), self.clips_per_video).astype(int)])
+                                                    for ss in np.linspace(0, max(nf-chunk_size, 1),
+                                                                          self.clips_per_video).astype(int)])
 
             if self.return_audio:
                 nf = sample['audio'].shape[1]
@@ -160,7 +122,8 @@ class VideoDataset(data.Dataset):
                     chunks['audio'] = torch.stack([sample['audio'] for _ in range(self.clips_per_video)])
                 else:
                     chunks['audio'] = torch.stack([sample['audio'][:, ss:ss+chunk_size]
-                                                   for ss in np.linspace(0, max(nf-chunk_size, 1), self.clips_per_video).astype(int)])
+                                                   for ss in np.linspace(0, max(nf-chunk_size, 1),
+                                                                         self.clips_per_video).astype(int)])
 
             if self.return_labels:
                 chunks['label'] = sample['label']
@@ -169,14 +132,9 @@ class VideoDataset(data.Dataset):
                 ts = torch.from_numpy(np.linspace(start_time, final_time-self.video_clip_duration, self.clips_per_video))
                 chunks['index'] = torch.stack([sample['index'][:1].repeat(self.clips_per_video), ts.float()], dim=1)
 
-            if self.return_signatures:
-                raise NotImplementedError
             return chunks
 
     def __len__(self):
-        if self.chunk_index is not None:
-            return len(self.chunk_index)
-
         if self.mode == 'clip':
             return self.time_lims.shape[0] * self.clips_per_video
         else:
@@ -199,7 +157,7 @@ class VideoDataset(data.Dataset):
             if self.video_clip_duration > video_duration:
                 return 0., video_duration, 0., video_duration
             else:
-                min_d, max_d = self.video_clip_duration, min(self.video_clip_duration * self.time_scale_max_ratio, video_duration)
+                min_d, max_d = self.video_clip_duration, min(self.video_clip_duration, video_duration)
                 duration = random.uniform(min_d, max_d)
                 sample_ss_v = random.uniform(video_st, video_ft - duration)
                 return sample_ss_v, duration, sample_ss_v, duration
@@ -226,9 +184,6 @@ class VideoDataset(data.Dataset):
                 return sample_ss_v, self.video_clip_duration, sample_ss_a, self.audio_clip_duration
 
     def get_clip(self, clip_idx, video_start_time, audio_start_time, video_clip_duration=None, audio_clip_duration=None, return_video=True, return_audio=True, transform=True):
-        if self.nneigs_fn is not None and self.nneigs is None:
-            self.nneigs = np.memmap(self.nneigs_fn, dtype='int64', mode='r', shape=(len(self), 100))
-
         if video_clip_duration is None:
             video_clip_duration = self.video_clip_duration
         if audio_clip_duration is None:
@@ -289,14 +244,5 @@ class VideoDataset(data.Dataset):
 
         if self.return_index:
             sample['index'] = torch.tensor([float(clip_idx), video_start_time, video_clip_duration, audio_start_time, audio_clip_duration])
-
-        if self.return_signatures:
-            for sign in self.signatures:
-                signature = self.signatures[sign][clip_idx].toarray()[0].astype(np.float32)
-                if signature.sum() != 0:
-                    signature /= signature.sum()
-                else:
-                    signature[:] = 1./signature.size
-                sample['{}_signature'.format(sign)] = signature
 
         return sample

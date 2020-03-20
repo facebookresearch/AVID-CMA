@@ -15,12 +15,25 @@ AUDIO_ROOT = '/datasets01_101/audioset/042319/data'
 AUDIO_VERSION = ''
 AUDIO_EXT = 'flac'
 
-# VIDEO_ROOT = '/checkpoint/pmorgado/audioset/042319/data'
-VIDEO_ROOT = '/datasets01_101/audioset/042319/data'
-VIDEO_VERSION = '_avi-288p'
-VIDEO_EXT = 'avi'
-# VIDEO_VERSION = ''
-# VIDEO_EXT = 'mp4'
+# # VIDEO_ROOT = '/checkpoint/pmorgado/audioset/042319/data'
+# VIDEO_ROOT = '/datasets01_101/audioset/042319/data'
+# VIDEO_VERSION = '_avi-288p'
+# VIDEO_EXT = 'avi'
+# # VIDEO_VERSION = ''
+# # VIDEO_EXT = 'mp4'
+
+VIDEO_ROOT = {
+    'full_res': '/checkpoint/pmorgado/audioset/042319/data',
+    'low_res': '/datasets01_101/audioset/042319/data'
+}
+VIDEO_VERSION = {
+    'full_res': '-g32',
+    'low_res': '_avi-288p',
+}
+VIDEO_EXT = {
+    'full_res': 'mp4',
+    'low_res': 'avi',
+}
 
 def get_video_meta(m, classes):
     positive_labels = [classes.class2index(cls) for cls in m['positive_labels']]
@@ -177,6 +190,7 @@ class AudiosetClasses:
 
 class AudioSet(VideoDataset):
     def __init__(self, subset,
+                 full_res=False,
                  return_video=True,
                  video_clip_duration=1.,
                  video_fps=25.,
@@ -195,22 +209,16 @@ class AudioSet(VideoDataset):
                  max_offsync_augm=0,
                  mode='clip',
                  clips_per_video=1,
-                 return_nneig=False,
-                 nneigs_cutoff=10,
-                 nneigs_fn=None,
-                 return_signatures=False,
-                 signatures_fns=None,
-                 full_res=False
                  ):
 
-        global VIDEO_VERSION, VIDEO_EXT, VIDEO_ROOT
         if full_res:
-            VIDEO_ROOT = '/checkpoint/pmorgado/audioset/042319/data'
-            VIDEO_VERSION = '-g32'
-            VIDEO_EXT = 'mp4'
+            video_root = VIDEO_ROOT['full_res']
+            video_version = VIDEO_VERSION['full_res']
+            video_ext = VIDEO_EXT['full_res']
         else:
-            VIDEO_VERSION = '_avi-288p'
-            VIDEO_EXT = 'avi'
+            video_root = VIDEO_ROOT['low_res']
+            video_version = VIDEO_VERSION['low_res']
+            video_ext = VIDEO_EXT['low_res']
 
         meta, classes = get_metadata(subset)
         if subset == 'unbalanced_train':
@@ -221,9 +229,9 @@ class AudioSet(VideoDataset):
         time_lims = np.array([
             [m['video_start'], m['video_start'] + m['video_duration'],
              m['audio_start'], m['audio_start'] + m['audio_duration']] for m in meta])
-        video_root = '{}/{}_segments/video{}'.format(VIDEO_ROOT, subset.split('-')[0], VIDEO_VERSION)
+        video_root = '{}/{}_segments/video{}'.format(video_root, subset.split('-')[0], video_version)
         video_fns = ['{}_{:d}_{:d}.{}'.format(
-            m['YTID'], int(m['start_seconds'] * 1000), int(m['end_seconds'] * 1000), VIDEO_EXT) for m in meta]
+            m['YTID'], int(m['start_seconds'] * 1000), int(m['end_seconds'] * 1000), video_ext) for m in meta]
         audio_root = '{}/{}_segments/audio'.format(AUDIO_ROOT, subset.split('-')[0])
         audio_fns = ['{}_{:d}_{:d}.{}'.format(
             m['YTID'], int(m['start_seconds'] * 1000), int(m['end_seconds'] * 1000), AUDIO_EXT) for m in meta]
@@ -255,15 +263,10 @@ class AudioSet(VideoDataset):
             mode=mode,
             clips_per_video=clips_per_video,
             missing_audio_as_zero=missing_audio_as_zero,
-            return_nneig=return_nneig,
-            nneigs_cutoff=nneigs_cutoff,
-            nneigs_fn=nneigs_fn,
-            return_signatures=return_signatures,
-            signatures_fns=signatures_fns,
         )
 
         self.name = 'AudioSet dataset'
-        self.root = VIDEO_ROOT
+        self.root = video_root
         self.subset = subset
 
         # self.classes = classes
@@ -271,102 +274,3 @@ class AudioSet(VideoDataset):
         self.num_classes = len(classes)
 
         self.sample_id = np.array([m['YTID'].encode('utf-8') for m in meta])
-
-
-def benchmark(batch_size=16, num_workers=4):
-    import time
-    import torch.utils.data as data
-    from datasets import preprocessing
-    import yaml
-
-    cfg = yaml.safe_load(open('configs/main/mc-avc/av_vggish_small-l3d5-mc32b-100k.yaml'))
-    db_cfg = cfg['dataset']
-    split_cfg = db_cfg['train']
-
-    video_transform = preprocessing.VideoPrep_MSC_CJ(
-        crop=(db_cfg['crop_size'], db_cfg['crop_size']),
-        augment=split_cfg['use_augmentation'],
-        pad_missing=True,
-        num_frames=int(db_cfg['video_fps'] * db_cfg['clip_duration']),
-    )
-
-    # Audio transforms
-    audio_transforms = [
-        preprocessing.AudioPrepLibrosa(
-            trim_pad=True,
-            duration=db_cfg['clip_duration'],
-            augment=split_cfg['use_augmentation'],
-            missing_as_zero=True)]
-
-    audio_transforms += [
-        preprocessing.SpectrogramLibrosa(
-            n_fft=db_cfg['n_fft'],
-            hop_size=1. / db_cfg['spectrogram_fps'],
-            normalize=db_cfg['normalize_fft'] if 'normalize_fft' in db_cfg else True,
-            spect_db=True,
-        )
-    ]
-    audio_fps_out = db_cfg['spectrogram_fps']
-    audio_shape = (1, int(db_cfg['spectrogram_fps'] * db_cfg['clip_duration']), 129)
-
-    dataset = AudioSet(
-        subset='unbalanced_train-100k',
-        full_res=False,
-        clip_duration=db_cfg['clip_duration'],
-        return_video=True,
-        video_fps=db_cfg['video_fps'],
-        video_fps_out=db_cfg['video_fps'],
-        video_shape=(3, int(db_cfg['video_fps']*db_cfg['clip_duration']), db_cfg['crop_size'], db_cfg['crop_size']),
-        video_transform=video_transform,
-        return_audio=False,
-        audio_fps=db_cfg['audio_fps'],
-        audio_fps_out=audio_fps_out,
-        audio_shape=audio_shape,
-        audio_transform=audio_transforms,
-        max_offsync_augm=0,
-        return_labels=False,
-        missing_audio_as_zero=False,
-        mode='clip',
-        )
-    print(dataset)
-
-    loader = data.DataLoader(
-            dataset,
-            batch_size=batch_size,
-            shuffle=True,
-            num_workers=num_workers,
-            pin_memory=True)
-
-    tt = time.time()
-    read_times = []
-    for idx, batch in enumerate(loader):
-        if idx > 10:
-            read_times.append(time.time()-tt)
-
-            frames_per_clip = int(db_cfg['video_fps']*db_cfg['clip_duration'])
-            secs_per_clip = np.mean(read_times) / batch_size
-            print('Iter {:03d} | Secs per batch {:.3f} | Clips per sec {:.3f} | Frames per sec  {:.3f}'.format(
-                idx, secs_per_clip * batch_size, 1. / secs_per_clip, frames_per_clip / secs_per_clip
-            ))
-
-        if idx > 100:
-            break
-        tt = time.time()
-
-    frames_per_clip = int(db_cfg['video_fps']*db_cfg['clip_duration'])
-    secs_per_clip = np.mean(read_times) / batch_size
-
-    print('')
-    print('Num workers     | {}'.format(num_workers))
-    print('Batch size      | {}'.format(batch_size))
-    print('Frames per clip | {}'.format(frames_per_clip))
-    print('Secs per batch  | {:.3f}'.format(secs_per_clip * batch_size))
-    print('Clips per sec   | {:.3f}'.format(1. / secs_per_clip))
-    print('Frames per sec  | {:.3f}'.format(frames_per_clip / secs_per_clip))
-
-
-if __name__ == '__main__':
-    for w in [1]:
-        for bs in [8]:
-            print('=' * 60)
-            benchmark(batch_size=bs, num_workers=w)

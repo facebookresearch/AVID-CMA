@@ -189,7 +189,8 @@ def av_loader2(path, video_fps=None, audio_fps=None, start_time=0, duration=None
         duration = min(duration, snd_ff - start_time)
         end_time = start_time + duration
 
-        container.seek(int(start_time / av.time_base))
+        # container.seek(int(start_time / av.time_base))
+        audio_stream.seek(int(start_time / audio_stream.time_base))
         aframes = []
         first_frame_pts = None
         for frame in container.decode(audio=0):

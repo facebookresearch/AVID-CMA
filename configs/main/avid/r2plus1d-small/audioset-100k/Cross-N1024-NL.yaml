@@ -37,7 +37,7 @@ dataset:
 optimizer:
   name: "adam"
   weight_decay: 0.00001
-  num_epochs: 101
+  num_epochs: 102
   lr:
     name: "multistep"
     base_lr: 0.0001

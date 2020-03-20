@@ -90,7 +90,6 @@ class UCF(VideoDataset):
                  return_labels=False,
                  missing_audio_as_zero=False,
                  max_offsync_augm=0,
-                 time_scale_max_ratio=1,
                  mode='clip',
                  clips_per_video=20,
                  ):
@@ -129,74 +128,9 @@ class UCF(VideoDataset):
             return_labels=return_labels,
             labels=labels,
             max_offsync_augm=max_offsync_augm,
-            time_scale_max_ratio=time_scale_max_ratio,
             time_lims=sample_time_lims,
             mode=mode,
             clips_per_video=clips_per_video,
             missing_audio_as_zero=missing_audio_as_zero,
         )
 
-
-def benchmark(batch_size, num_workers):
-    import time
-    from datasets import preprocessing
-
-    CLIP_DURATION = 1.
-    VIDEO_FPS = 16.
-    AUDIO_FPS = 48000
-    SPECTROGRAM_FPS = 64.
-    FRAME_SIZE = 256
-    CROP_SIZE = 224
-
-    video_transform = preprocessing.VideoPreprocessing(resize=FRAME_SIZE, crop=(CROP_SIZE, CROP_SIZE), augment=True)
-    audio_transform = preprocessing.AudioPrepLibrosa(duration=CLIP_DURATION, missing_as_zero=True, augment=True)
-    dataset = UCF('trainlist01',
-                clip_duration=CLIP_DURATION,
-                return_video=True,
-                video_fps=VIDEO_FPS,
-                video_transform=video_transform,
-                return_audio=False,
-                audio_fps=AUDIO_FPS,
-                audio_transform=audio_transform,
-                return_labels=True,
-                missing_audio_as_zero=True)
-
-    print(dataset)
-
-    loader = data.DataLoader(
-        dataset,
-        batch_size=batch_size,
-        shuffle=True,
-        num_workers=num_workers,
-        pin_memory=True)
-
-    tt = time.time()
-    read_times = []
-    frames_per_clip = int(VIDEO_FPS * CLIP_DURATION)
-    for idx, batch in enumerate(loader):
-        read_times.append(time.time() - tt)
-        tt = time.time()
-
-        secs_per_clip = np.mean(read_times[1:]) / batch_size
-        print('Iter {:03d} | Secs per batch {:.3f} | Clips per sec {:.3f} | Frames per sec  {:.3f}'.format(
-            idx, secs_per_clip * batch_size, 1. / secs_per_clip, frames_per_clip / secs_per_clip
-        ))
-        if idx > 100:
-            break
-
-    secs_per_clip = np.mean(read_times[1:]) / batch_size
-
-    print('')
-    print('Num workers     | {}'.format(num_workers))
-    print('Batch size      | {}'.format(batch_size))
-    print('Frames per clip | {}'.format(frames_per_clip))
-    print('Secs per batch  | {:.3f}'.format(secs_per_clip * batch_size))
-    print('Clips per sec   | {:.3f}'.format(1. / secs_per_clip))
-    print('Frames per sec  | {:.3f}'.format(frames_per_clip / secs_per_clip))
-
-
-if __name__ == '__main__':
-    for w in [1]:
-        for bs in [62]:
-            print('=' * 60)
-            benchmark(batch_size=bs, num_workers=w)
