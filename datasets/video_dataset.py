@@ -43,10 +43,12 @@ class VideoDataset(data.Dataset):
                  ):
         super(VideoDataset, self).__init__()
 
+        self.num_samples = 0
         self.return_video = return_video
         self.video_root = video_root
         if return_video:
             self.video_fns = chararray(video_fns)
+            self.num_samples = self.video_fns.shape[0]
         self.video_fps = video_fps
         self.video_fps_out = video_fps_out
         self.video_shape = video_shape
@@ -59,6 +61,7 @@ class VideoDataset(data.Dataset):
         self.audio_root = audio_root
         if return_audio:
             self.audio_fns = chararray(audio_fns)
+            self.num_samples = self.audio_fns.shape[0]
         self.audio_fps = audio_fps
         self.audio_fps_out = audio_fps_out
         self.audio_shape = audio_shape
@@ -80,7 +83,7 @@ class VideoDataset(data.Dataset):
     def __getitem__(self, index):
         if self.mode == 'clip':
             try:
-                sample_idx = index % self.time_lims.shape[0]
+                sample_idx = index % self.num_samples
                 video_start_time, video_duration, audio_start_time, audio_duration = self.sample_snippet(sample_idx)
                 sample = self.get_clip(int(sample_idx), video_start_time, audio_start_time, video_clip_duration=video_duration, audio_clip_duration=audio_duration)
                 if sample is None:
@@ -136,9 +139,9 @@ class VideoDataset(data.Dataset):
 
     def __len__(self):
         if self.mode == 'clip':
-            return self.time_lims.shape[0] * self.clips_per_video
+            return self.num_samples * self.clips_per_video
         else:
-            return self.time_lims.shape[0]
+            return self.num_samples
 
     def __repr__(self):
         desc = "{}\n - Root: {}\n - Subset: {}\n - Num videos: {}\n - Num samples: {}\n".format(

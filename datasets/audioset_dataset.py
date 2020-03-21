@@ -9,7 +9,7 @@ from utils.ioutils import av_wrappers
 from datasets.video_dataset import VideoDataset
 
 ANN_DIR = '/datasets01_101/audioset/042319/'
-CACHE_DIR = '/checkpoint/pmorgado/data_cache/audioset'
+CACHE_DIR = 'datasets/cache/audioset'
 
 AUDIO_ROOT = '/datasets01_101/audioset/042319/data'
 AUDIO_VERSION = ''

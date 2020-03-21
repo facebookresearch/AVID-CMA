@@ -8,7 +8,7 @@ from utils.ioutils import av_wrappers
 
 ROOT = '/datasets01_101/ucf101/112018/'
 ANNO_DIR = '/datasets01_101/ucf101/112018/ucfTrainTestlist/'
-CACHE_DIR = '/checkpoint/pmorgado/data_cache/ucf101'
+CACHE_DIR = 'datasets/cache/ucf101'
 
 
 def get_metadata():

@@ -314,7 +314,7 @@ def build_dataloader(db_cfg, split_cfg, num_workers, distributed):
             duration=db_cfg['audio_clip_duration'],
             augment=split_cfg['use_augmentation'],
             missing_as_zero=True),
-        preprocessing.SpectrogramLibrosa2(
+        preprocessing.LogSpectrogram(
             db_cfg['audio_fps'],
             n_fft=db_cfg['n_fft'],
             hop_size=1. / db_cfg['spectrogram_fps'],

@@ -14,7 +14,7 @@ from datasets.video_dataset import VideoDataset
 
 # ROOT = '/datasets01_101/kinetics/070618/400/'
 ANNO_DIR = '/datasets01_101/kinetics/070618/400/list'
-CACHE_DIR = '/checkpoint/pmorgado/data_cache/kinetics_400'
+CACHE_DIR = 'datasets/cache/kinetics_400'
 
 # AUDIO_VERSION = ''
 # AUDIO_EXT = 'mp4'

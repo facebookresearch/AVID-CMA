@@ -2,7 +2,6 @@ import torch
 import numpy as np
 import random
 import librosa
-import torchaudio
 
 
 class VideoPrep_MSC_CJ(object):
@@ -134,35 +133,6 @@ def normalize_spectrogram(tensor, mean, std):
     return tensor
 
 
-class Spectrogram(object):
-    def __init__(self, n_fft=512, hop_size=0.005, inp_sr=48000, spect_db=True, normalize=False):
-        self.n_fft = n_fft
-        self.hop_size = int(hop_size*inp_sr)
-        self.inp_sr = inp_sr
-        self.spect_db = spect_db
-        self.normalize = normalize
-
-        self.spectrogram = torchaudio.transforms.Spectrogram(
-            n_fft=self.n_fft, hop=self.hop_size, power=2., window=torch.hann_window, normalize=False)
-        if self.spect_db:
-            self.toDB = torchaudio.transforms.SpectrogramToDB("power", top_db=100)
-
-        if self.normalize:
-            if self.spect_db:
-                stats = np.load('/checkpoint/pmorgado/data_cache/audioset/audio-spectDB-norm-stats.npz')
-            else:
-                stats = np.load('/checkpoint/pmorgado/data_cache/audioset/audio-spect-norm-stats.npz')
-            self.mean, self.std = stats['mean'], stats['std']
-
-    def __call__(self, sig):
-        spect = self.spectrogram(sig)[:, :-1]
-        if self.spect_db:
-            spect = self.toDB(spect)
-        if self.normalize:
-            spect = normalize_spectrogram(spect, self.mean, self.std)
-        return spect
-
-
 class AudioPrepLibrosa(object):
     def __init__(self, trim_pad=True, duration=None, missing_as_zero=False, augment=False, to_tensor=False, volume=0.1):
         self.trim_pad = trim_pad
@@ -205,42 +175,7 @@ class AudioPrepLibrosa(object):
         return sig, sr
 
 
-class SpectrogramLibrosa(object):
-    def __init__(self, n_fft=512, win_length=None, hop_size=0.005, spect_db=True, normalize=False):
-        self.n_fft = n_fft
-        self.win_length = win_length
-        self.hop_size = hop_size
-        self.rate = 1./hop_size
-        self.spect_db = spect_db
-        self.normalize = normalize
-
-        if self.normalize:
-            if self.spect_db:
-                if n_fft == 512:
-                    stats = np.load('/checkpoint/pmorgado/data_cache/audioset/audio-spectDB-librosa-norm-stats.npz')
-                elif n_fft == 256:
-                    stats = np.load('/checkpoint/pmorgado/data_cache/audioset/audio-spectDB-24k-257-norm-stats.npz')
-            else:
-                stats = np.load('/checkpoint/pmorgado/data_cache/audioset/audio-spect-librosa-norm-stats.npz')
-            self.mean, self.std = stats['mean'], stats['std']
-
-    def __call__(self, sig, sr, duration=None):
-        hop_length = int(self.hop_size * sr)
-        spect = np.abs(librosa.stft(sig[0], n_fft=self.n_fft, win_length=self.win_length, hop_length=hop_length))**2.
-        if duration is not None:
-            num_frames = int(duration * self.rate)
-            spect = spect[:, :num_frames]
-
-        if self.spect_db:
-            spect = librosa.core.power_to_db(spect, top_db=100)
-        if self.normalize:
-            spect = (spect - self.mean[:, np.newaxis]) / (self.std[:, np.newaxis] + 1e-5)
-        spect_tensor = torch.from_numpy(spect)
-        spect_tensor = torch.transpose(spect_tensor, 0, 1).unsqueeze(0)
-        return spect_tensor, self.rate
-
-
-class SpectrogramLibrosa2(object):
+class LogSpectrogram(object):
     def __init__(self, fps, n_fft=512, hop_size=0.005, spect_db=True, normalize=False):
         self.inp_fps = fps
         self.n_fft = n_fft
@@ -252,11 +187,11 @@ class SpectrogramLibrosa2(object):
         if self.normalize:
             if self.spect_db:
                 if n_fft == 512 and fps == 24000:
-                    stats = np.load('/checkpoint/pmorgado/data_cache/audioset/audio-spectDB-24k-513-norm-stats.npz')
+                    stats = np.load('datasets/assets/audio-spectDB-24k-513-norm-stats.npz')
                 elif n_fft == 256 and fps == 24000:
-                    stats = np.load('/checkpoint/pmorgado/data_cache/audioset/audio-spectDB-24k-257-norm-stats.npz')
+                    stats = np.load('datasets/assets/audio-spectDB-24k-257-norm-stats.npz')
             else:
-                stats = np.load('/checkpoint/pmorgado/data_cache/audioset/audio-spect-librosa-norm-stats.npz')
+                stats = np.load('datasets/assets/audio-spect-librosa-norm-stats.npz')
             self.mean, self.std = stats['mean'], stats['std']
 
     def __call__(self, sig, sr, duration=None):
@@ -275,84 +210,3 @@ class SpectrogramLibrosa2(object):
         spect_tensor = torch.transpose(spect_tensor, 0, 1).unsqueeze(0)
         return spect_tensor, self.rate
 
-
-class MelSpectrogramLibrosa(object):
-    def __init__(self, n_mels=128, n_fft=2048, hop_size=0.01, spect_db=True, normalize=False):
-        self.n_fft = n_fft
-        self.n_mels = n_mels
-        self.hop_size = hop_size
-        self.rate = 1. / hop_size
-        self.spect_db = spect_db
-        self.normalize = normalize
-
-        if self.normalize:
-            if self.spect_db:
-                stats = np.load('/checkpoint/pmorgado/data_cache/audioset/melspect-db-fs40960-fft2048-mels40-norm-stats.npz')
-            else:
-                stats = np.load('/checkpoint/pmorgado/data_cache/audioset/melspect-fs40960-fft2048-mels128-norm-stats.npz')
-            self.mean, self.std = stats['mean'], stats['std']
-
-    def __call__(self, sig, sr, duration=None):
-        hop_size = int(self.hop_size * sr)
-
-        spect = librosa.feature.melspectrogram(sig[0], sr=sr, n_fft=self.n_fft, hop_length=hop_size, n_mels=self.n_mels)
-        if duration is not None:
-            num_frames = int(duration * self.rate)
-            spect = spect[:, :num_frames]
-
-        if self.spect_db:
-            spect = librosa.core.power_to_db(spect, top_db=100)
-        if self.normalize:
-            spect = (spect - self.mean[:, np.newaxis]) / (self.std[:, np.newaxis] + 1e-5)
-        spect_tensor = torch.from_numpy(spect.astype(np.float32))
-        spect_tensor = torch.transpose(spect_tensor, 0, 1).unsqueeze(0)
-        return spect_tensor, self.rate
-
-
-def main():
-    import datasets
-    import torch
-    import torch.utils.data as data
-    import numpy as np
-
-    audio_fps = 24000
-    n_fft = 512
-    clip_duration = 2.
-    spect_db = True
-    audio_transform = [
-        AudioPrepLibrosa(duration=clip_duration, trim_pad=True, augment=True),
-        SpectrogramLibrosa(n_fft=n_fft, hop_size=1./64, spect_db=spect_db, normalize=False)
-    ]
-    dataset = datasets.AudioSet(
-            subset='unbalanced_train-100k',
-            return_video=False,
-            video_fps=1,
-            video_fps_out=1,
-            return_audio=True,
-            audio_clip_duration=clip_duration,
-            audio_fps=audio_fps,
-            audio_fps_out=64,
-            audio_shape=(1, int(64*clip_duration), n_fft//2+1),
-            audio_transform=audio_transform,
-        )
-
-    loader = data.DataLoader(dataset, batch_size=100, num_workers=20, pin_memory=True, shuffle=True)
-    audio_samples = []
-    for ii, sample in enumerate(loader):
-        audio_samples.append(sample['audio'][:, 0])
-        if ii == 500:
-            break
-        if ii % 10 == 0:
-            print(audio_samples[-1].shape, audio_samples[-1][0].min(), audio_samples[-1][0].max())
-            print(ii)
-    audio_samples = torch.cat(audio_samples, 0)
-    mean = torch.flatten(audio_samples, 0, 1).mean(0).cpu().numpy()
-    std = torch.flatten(audio_samples, 0, 1).std(0).cpu().numpy()
-    out_fn = f'/checkpoint/pmorgado/data_cache/audioset/audio-spect{"DB" if spect_db else ""}-{int(audio_fps/1000)}k-{n_fft+1}-norm-stats.npz'
-    np.savez(out_fn, mean=mean, std=std)
-    print(mean)
-    print(std)
-
-
-if __name__ == '__main__':
-    main()
