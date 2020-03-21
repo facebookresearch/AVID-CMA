@@ -9,7 +9,7 @@ ROOT = '/checkpoint/pmorgado/dcase'
 
 
 def wav_loader(filename, rate=None, start_time=0, duration=None):
-    _, (data, sr) =  av_wrappers.av_loader2(filename, audio_fps=rate, start_time=start_time, duration=duration, return_video=False, return_audio=True)
+    _, (data, sr) =  av_wrappers.av_loader(filename, audio_fps=rate, start_time=start_time, duration=duration, return_video=False, return_audio=True)
     return data, sr
 
 

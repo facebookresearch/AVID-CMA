@@ -195,7 +195,7 @@ class VideoDataset(data.Dataset):
         sample = {}
         if self.return_video and return_video:
             video_fn = '{}/{}'.format(self.video_root, self.video_fns[clip_idx].decode())
-            (frames, fps, start_time), _ = av_wrappers.av_loader2(
+            (frames, fps, start_time), _ = av_wrappers.av_loader(
                 video_fn,
                 return_video=True,
                 video_fps=self.video_fps,
@@ -213,7 +213,7 @@ class VideoDataset(data.Dataset):
 
         if self.return_audio and return_audio:
             audio_fn = '{}/{}'.format(self.audio_root, self.audio_fns[clip_idx].decode())
-            _, (samples, sr) = av_wrappers.av_loader2(
+            _, (samples, sr) = av_wrappers.av_loader(
                 audio_fn,
                 return_video=False,
                 return_audio=True,

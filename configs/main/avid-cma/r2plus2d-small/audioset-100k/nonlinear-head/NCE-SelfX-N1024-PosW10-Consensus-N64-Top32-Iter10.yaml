@@ -51,7 +51,7 @@ loss:
     resample_freq: 10
     sampling_args:
       type: "consensus"      # consensus, video, audio
-      pos_k: 32
+      pos_k: 128
 
 model:
   name: "NL-NCE-SelfX-N1024-PosW10-SelfConsensus-N64-Top32-Iter10"
@@ -59,7 +59,7 @@ model:
   arch: "av_wrapper"
   args:
     proj_dim: [512, 512, 128]
-    checkpoint: "checkpoints/AVID/Audioset-Small/R2Plus1D/Cross-N1024/checkpoint-ep75.pth.tar"
+    checkpoint: "checkpoints/AVID/Audioset-Small/R2Plus1D/Cross-N1024-NL/checkpoint-ep75.pth.tar"
     video_backbone: "R2Plus1D_Small"
     video_backbone_args:
       depth: 10

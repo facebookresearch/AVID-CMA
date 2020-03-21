@@ -138,7 +138,7 @@ def prep_environment(args, cfg):
         logger.add_line('{:30} {}'.format(k, args.__dict__[k]))
 
     tb_writter = None
-    if cfg['log2tb'] and args.rank == 0 and not cfg['test_only']:
+    if cfg['log2tb'] and args.rank == 0:
         tb_dir = '{}/tensorboard'.format(model_dir)
         os.system('mkdir -p {}'.format(tb_dir))
         tb_writter = SummaryWriter(tb_dir)

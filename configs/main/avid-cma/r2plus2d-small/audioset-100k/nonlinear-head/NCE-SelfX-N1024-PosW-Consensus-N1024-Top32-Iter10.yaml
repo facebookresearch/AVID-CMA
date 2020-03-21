@@ -58,7 +58,7 @@ model:
   arch: "av_wrapper"
   args:
     proj_dim: [512, 512, 128]
-    checkpoint: "checkpoints/AVID/Audioset-Small/R2Plus1D/Cross-N1024/checkpoint-ep75.pth.tar"
+    checkpoint: "checkpoints/AVID/Audioset-Small/R2Plus1D/Cross-N1024-NL/checkpoint-ep75.pth.tar"
     video_backbone: "R2Plus1D_Small"
     video_backbone_args:
       depth: 10

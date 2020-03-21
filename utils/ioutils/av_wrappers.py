@@ -42,98 +42,10 @@ def av_meta(inpt, video=None, audio=None, format=None):
     return video_meta, audio_meta
 
 
-def av_loader(video_path, audio_path, meta, video_fps=-1, audio_fps=-1, start_time=0, duration=-1, return_video=True, return_audio=True):
-    # video_meta, _ = av_meta(video_container, video=0)
-    # _, audio_meta = av_meta(audio_container, audio=0)
-
-    # Check loader arguments
-    video_end = meta['video_meta']['duration'] + meta['video_meta']['start_time']
-    if return_audio:
-        audio_end = meta['audio_meta']['duration'] + meta['audio_meta']['start_time']
-        end_time = min(video_end, audio_end)
-    else:
-        end_time = video_end
-    if duration == -1:
-        duration = end_time - start_time
-    duration = min(duration, end_time - start_time)
-
-    if video_fps == -1:
-        video_fps = meta['video_meta']['fps']
-    if return_audio and audio_fps == -1:
-        audio_fps = meta['audio_meta']['fps']
-
-    end_time = start_time + duration
-
+def av_loader(path, video_fps=None, audio_fps=None, start_time=0, duration=None, return_video=True, return_audio=True):
     # Extract video frames
     vframes = None
-    if return_video:
-        container = av.open(video_path, format=meta['video_fmt'])
-        video_stream = container.streams.video[0]
-
-        video_start_time = int(start_time * video_stream.average_rate) / video_stream.average_rate
-        outp_times = [t for t in np.arange(video_start_time, video_start_time + duration - 0.5/video_fps, 1./video_fps)]
-        outp_vframes = [int((t - meta['video_meta']['start_time']) * meta['video_meta']['fps']) for t in outp_times]
-
-        # container.seek(int(video_start_time / video_stream.time_base), stream=video_stream)
-        container.seek(int(video_start_time * av.time_base))
-        vframes = []
-        for frame in container.decode(video=0):
-            frame_id = frame.pts * frame.time_base * video_stream.rate
-            if frame_id < outp_vframes[len(vframes)]:
-                continue
-            pil_img = frame.to_image()
-            while frame_id >= outp_vframes[len(vframes)]:
-                vframes.append((frame.time, pil_img))
-                if len(vframes) == len(outp_vframes):
-                    break
-            if len(vframes) == len(outp_vframes):
-                break
-
-        vframes = [vf[1] for vf in vframes]
-
-    # Extract audio
-    aframes = None
-    if return_audio:
-        audio_resampler = av.audio.resampler.AudioResampler(
-            format="s16p", layout="mono", rate=audio_fps)
-
-        container = av.open(audio_path, format=meta['audio_fmt'])
-        audio_stream = container.streams.audio[0]
-
-        container.seek(int(start_time / audio_stream.time_base), stream=audio_stream)
-        aframes = []
-        num_aframes = 0
-        for frame in container.decode(audio=0):
-            frame_pts = frame.pts * frame.time_base
-            frame_end_pts = frame_pts + Fraction(frame.samples, frame.rate)
-            if frame_end_pts < start_time:   # Skip until start time
-                continue
-            if frame_pts > end_time:       # Exit if clip has been extracted
-                break
-            frame.pts = num_aframes
-            num_aframes += frame.samples
-            np_snd = audio_resampler.resample(frame).to_ndarray()
-            aframes.append((frame_pts, np_snd))
-
-        audio_start_time = aframes[0][0]
-        aframes = np.concatenate([af[1] for af in aframes], 1)
-        ss = int((start_time - audio_start_time) * audio_fps)
-        t = int(duration * audio_fps)
-        if ss < 0:
-            aframes = np.pad(aframes, ((0, 0), (-ss, 0)), 'constant', constant_values=0)
-            ss = 0
-        if t > aframes.shape[1]:
-            aframes = np.pad(aframes, ((0, 0), (0, t-aframes.shape[1])), 'constant', constant_values=0)
-        aframes = aframes[:, ss: ss+t]
-
-    return vframes, aframes
-
-
-def av_loader2(path, video_fps=None, audio_fps=None, start_time=0, duration=None, return_video=True, return_audio=True):
     container = av.open(path)
-
-    # Extract video frames
-    vframes = None
     if return_video and len(container.streams.video)>=1:
         video_stream = container.streams.video[0]
         vid_ss = video_stream.start_time * video_stream.time_base
@@ -152,6 +64,7 @@ def av_loader2(path, video_fps=None, audio_fps=None, start_time=0, duration=None
         start_time = outp_vframes[0] / float(vid_fps)
 
         container.seek(int(start_time * av.time_base))
+        # video_stream.seek(int(start_time / video_stream.time_base))
         vframes = []
         for frame in container.decode(video=0):
             if len(vframes) == len(outp_vframes):
@@ -166,8 +79,10 @@ def av_loader2(path, video_fps=None, audio_fps=None, start_time=0, duration=None
                     break
 
         vframes = [vf[1] for vf in vframes]
+    container.close()
 
     # Extract audio
+    container = av.open(path)
     aframes = None
     if return_audio and len(container.streams.audio)>=1:
         audio_stream = container.streams.audio[0]
@@ -189,8 +104,8 @@ def av_loader2(path, video_fps=None, audio_fps=None, start_time=0, duration=None
         duration = min(duration, snd_ff - start_time)
         end_time = start_time + duration
 
-        # container.seek(int(start_time / av.time_base))
-        audio_stream.seek(int(start_time / audio_stream.time_base))
+        container.seek(int(start_time * av.time_base))
+        # audio_stream.seek(int(start_time / audio_stream.time_base))
         aframes = []
         first_frame_pts = None
         for frame in container.decode(audio=0):

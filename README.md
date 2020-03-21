@@ -86,4 +86,9 @@ Config files used for each experiment.
       - `configs/main/avid/r2plus1d/audioset/Cross-N1024-NL.yaml`
       
 * CMA
-  *  
+  *  Parameter Sweeping on Audioset-100k
+    - `configs/main/avid-cma/r2plus2d-small/audioset-100k/linear-head`
+    - `configs/main/avid-cma/r2plus2d-small/audioset-100k/nonlinear-head`
+  *  Kinetics
+    - `configs/main/avid-cma/r2plus2d-small/audioset-100k/linear-head`
+    - `configs/main/avid-cma/r2plus2d-small/audioset-100k/nonlinear-head`
