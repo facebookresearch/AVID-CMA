@@ -69,6 +69,7 @@ def main_worker(fold, args, cfg):
 
     # Model
     model = build_model(model_cfg, logger).cuda()
+    model = model.train(False)
 
     # Extract features
     train_loader, test_loader, dense_loader = build_dataloaders(cfg['dataset'], fold, cfg['num_workers'])
@@ -81,8 +82,8 @@ def main_worker(fold, args, cfg):
 
     acc = {}
     for k in cfg['model']['feat_names']:
-        clf = OneVsRestClassifier(LinearSVC(C=cfg['model']['C'], loss='squared_hinge', intercept_scaling=1.0, random_state=0, tol=0.0001, max_iter=200, verbose=1), n_jobs=-1)
-        # clf = OneVsRestClassifier(SVC(kernel='linear-head', C=cfg['model']['C'], random_state=0, tol=0.0001, max_iter=2000), n_jobs=-1)
+        clf = OneVsRestClassifier(LinearSVC(C=cfg['model']['C'], loss='linear', intercept_scaling=1.0, random_state=0, tol=0.0001, max_iter=200, verbose=1), n_jobs=-1)
+        # clf = OneVsRestClassifier(SVC(kernel='linear', C=cfg['model']['C'], random_state=0, tol=0.0001, max_iter=2000), n_jobs=-1)
         scaler = StandardScaler()
 
         logger.add_line('\n'+'='*60+'\nFitting SVM to {}'.format(k))
@@ -133,7 +134,7 @@ def build_dataloader(db_cfg, split_cfg, fold, num_workers):
             duration=db_cfg['clip_duration'],
             augment=split_cfg['use_augmentation'],
             missing_as_zero=True),
-        preprocessing.LogSpectrogram(
+        preprocessing.SpectrogramLibrosa2(
             db_cfg['audio_fps'],
             n_fft=db_cfg['n_fft'],
             hop_size=1. / db_cfg['spectrogram_fps'],

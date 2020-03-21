@@ -3,29 +3,15 @@ sys.path.insert(0, '.')
 import os
 import json
 import csv
-import torch
 import numpy as np
-import torch.utils.data as data
 import multiprocessing as mp
 from utils.ioutils import av_wrappers
 
 from datasets.video_dataset import VideoDataset
 
 
-# ROOT = '/datasets01_101/kinetics/070618/400/'
 ANNO_DIR = '/datasets01_101/kinetics/070618/400/list'
 CACHE_DIR = 'datasets/cache/kinetics_400'
-
-# AUDIO_VERSION = ''
-# AUDIO_EXT = 'mp4'
-# AUDIO_FORMAT = 'mp4'
-#
-# # VIDEO_VERSION = '_avi-288p'
-# # VIDEO_EXT = 'avi'
-# # VIDEO_FORMAT = 'avi'
-# VIDEO_VERSION = ''
-# VIDEO_EXT = 'mp4'
-# VIDEO_FORMAT = 'mp4'
 
 ROOT = {'full_res': '/checkpoint/pmorgado/kinetics/070618/400/',
         'low_res': '/datasets01_101/kinetics/070618/400/'}

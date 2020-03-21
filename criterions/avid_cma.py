@@ -105,8 +105,10 @@ class AVIDSimilarityPositiveExpansion(nn.Module):
     def __init__(self,
                  memory_size,
                  embedding_dim,
-                 xModal=True,
-                 wModal=False,
+                 xModalInst=True,
+                 wModalInst=False,
+                 xModalPos=False,
+                 wModalPos=True,
                  num_negatives=1024,
                  num_positives=8,
                  num_negatives_within=None,
@@ -125,10 +127,11 @@ class AVIDSimilarityPositiveExpansion(nn.Module):
         self.momentum = momentum
         self.device = device
 
-        self.pos_sampler = AliasMethod(torch.ones(sampling_args['pos_k']))
         self.neg_sampler = AliasMethod(torch.ones(memory_size-sampling_args['pos_k']))
-        self.xModal = xModal
-        self.wModal = wModal
+        self.xModalInst = xModalInst
+        self.wModalInst = wModalInst
+        self.xModalPos = xModalPos
+        self.wModalPos = wModalPos
         self.distributed = dist.is_available() and dist.is_initialized()
         self.rank = dist.get_rank() if self.distributed else 0
 
@@ -156,24 +159,27 @@ class AVIDSimilarityPositiveExpansion(nn.Module):
         def compute_scores(context_emb, target_embs, T):
             return [torch.bmm(trg, context_emb).squeeze(-1) / T for trg in target_embs]
 
+        # Instance Discrimination
         scores = {}
-        if self.xModal: # Cross-modal discrimination
-            # Positives: Use own and positive memories
-            xm_video_pos_mem = torch.cat([video_self_mem, video_pos_mem], 1)
-            xm_audio_pos_mem = torch.cat([audio_self_mem, audio_pos_mem], 1)
-            scores['v2a'] = compute_scores(video_emb, [xm_audio_pos_mem, audio_neg_mem], self.temperature)
-            scores['a2v'] = compute_scores(audio_emb, [xm_video_pos_mem, video_neg_mem], self.temperature)
+        if self.xModalInst:  # Cross-modal discrimination
+            scores['inst-v2a'] = compute_scores(video_emb, [audio_self_mem, audio_neg_mem], self.temperature)
+            scores['inst-a2v'] = compute_scores(audio_emb, [video_self_mem, video_neg_mem], self.temperature)
+        if self.wModalInst:  # Within-modal discrimination
+            scores['inst-v2a'] = compute_scores(video_emb, [audio_self_mem, audio_neg_mem], self.temperature)
+            scores['inst-a2v'] = compute_scores(audio_emb, [video_self_mem, video_neg_mem], self.temperature)
 
-        if self.wModal: # Within-modal discrimination
-            # Positives: Use positive set only
-            wm_video_pos_mem, wm_audio_pos_mem = video_pos_mem, audio_pos_mem
-            # Negatives: Potentially reduce number of negatives for within-modal discrimination
+        # Positive Set Discrimination
+        if self.xModalPos: # Cross-modal discrimination
+            scores['pos-v2a'] = compute_scores(video_emb, [audio_pos_mem, audio_neg_mem], self.temperature)
+            scores['pos-a2v'] = compute_scores(audio_emb, [video_pos_mem, video_neg_mem], self.temperature)
+        if self.wModalPos: # Within-modal discrimination
+            # Potentially reduce number of negatives for within-modal discrimination
             wm_video_neg_mem, wm_audio_neg_mem = video_neg_mem, audio_neg_mem
             if self.num_negatives_within is not None:
                 wm_video_neg_mem = video_neg_mem[:, :self.num_negatives_within]
                 wm_audio_neg_mem = audio_neg_mem[:, :self.num_negatives_within]
-            scores['v2v'] = compute_scores(video_emb, [wm_video_pos_mem, wm_video_neg_mem], self.temperature)
-            scores['a2a'] = compute_scores(audio_emb, [wm_audio_pos_mem, wm_audio_neg_mem], self.temperature)
+            scores['pos-v2v'] = compute_scores(video_emb, [video_pos_mem, wm_video_neg_mem], self.temperature)
+            scores['pos-a2a'] = compute_scores(audio_emb, [audio_pos_mem, wm_audio_neg_mem], self.temperature)
 
         # Update memory
         self.update_memory(video_emb.squeeze(-1), audio_emb.squeeze(-1), y)
@@ -181,12 +187,16 @@ class AVIDSimilarityPositiveExpansion(nn.Module):
         # Scores for tensorboard
         with torch.no_grad():
             loss_debug = {
+                'Scores/V2A/Inst': compute_scores(video_emb, [audio_self_mem], 1.)[0].mean(),
                 'Scores/V2A/Pos': compute_scores(video_emb, [audio_pos_mem], 1.)[0].mean(),
                 'Scores/V2A/Neg': compute_scores(video_emb, [audio_neg_mem], 1.)[0].mean(),
+                'Scores/A2V/Inst': compute_scores(audio_emb, [video_self_mem], 1.)[0].mean(),
                 'Scores/A2V/Pos': compute_scores(audio_emb, [video_pos_mem], 1.)[0].mean(),
                 'Scores/A2V/Neg': compute_scores(audio_emb, [video_neg_mem], 1.)[0].mean(),
+                'Scores/V2V/Inst': compute_scores(video_emb, [video_self_mem], 1.)[0].mean(),
                 'Scores/V2V/Pos': compute_scores(video_emb, [video_pos_mem], 1.)[0].mean(),
                 'Scores/V2V/Neg': compute_scores(video_emb, [video_neg_mem], 1.)[0].mean(),
+                'Scores/A2A/Inst': compute_scores(audio_emb, [audio_self_mem], 1.)[0].mean(),
                 'Scores/A2A/Pos': compute_scores(audio_emb, [audio_pos_mem], 1.)[0].mean(),
                 'Scores/A2A/Neg': compute_scores(audio_emb, [audio_neg_mem], 1.)[0].mean(),
             }
@@ -196,8 +206,7 @@ class AVIDSimilarityPositiveExpansion(nn.Module):
         # Draw positives
         positive_indexes = None
         if self.num_positives > 0:
-            resmp_idx =  self.pos_sampler.draw(y.shape[0] * self.num_positives).view(y.shape[0], -1).to(y.device)
-            positive_indexes = self.positive_set[y].gather(1, resmp_idx).long()
+            positive_indexes = self.positive_set[y].long()
 
         # Draw negatives
         bs = y.shape[0]
@@ -301,10 +310,14 @@ class AVID_CMA(nn.Module):
                  num_negatives_within=None,
                  momentum=0.5,
                  loss_type='nce',
-                 xModal=True,
-                 wModal=False,
-                 xModalCoeff=1.,
-                 wModalCoeff=1.,
+                 xModalInst=True,
+                 wModalInst=False,
+                 xModalInstCoeff=1.,
+                 wModalInstCoeff=1.,
+                 xModalPos=False,
+                 wModalPos=True,
+                 xModalPosCoeff=1.,
+                 wModalPosCoeff=1.,
                  sampling_args=None,
                  checkpoint=None,
                  resample_freq=-1,
@@ -319,18 +332,22 @@ class AVID_CMA(nn.Module):
             num_positives=num_positives,
             num_negatives_within=num_negatives_within,
             momentum=momentum,
-            xModal=xModal,
-            wModal=wModal,
+            xModalInst=xModalInst,
+            wModalInst=wModalInst,
             sampling_args=sampling_args,
             device=device
         )
         self.nce_average = self.nce_average.cuda(device)
 
         self.loss_type = loss_type
-        self.xModal = xModal
-        self.wModal = wModal
-        self.xModalCoeff = xModalCoeff
-        self.wModalCoeff = wModalCoeff
+        self.xModalInst = xModalInst
+        self.wModalInst = wModalInst
+        self.xModalInstCoeff = xModalInstCoeff
+        self.wModalInstCoeff = wModalInstCoeff
+        self.xModalPos = xModalPos
+        self.wModalPos = wModalPos
+        self.xModalPosCoeff = xModalPosCoeff
+        self.wModalPosCoeff = wModalPosCoeff
 
         # Setup loss function
         from criterions.nce import NCECriterion
@@ -364,14 +381,20 @@ class AVID_CMA(nn.Module):
             loss_debug_all[mt] = loss_debug[mt]
 
         # Compute cross/within modal discrimination losses
-        xModal_loss = torch.tensor([0.], device=emb1.device)
-        wModal_loss = torch.tensor([0.], device=emb1.device)
+        xModalInst_loss = torch.tensor([0.], device=emb1.device)
+        wModalInst_loss = torch.tensor([0.], device=emb1.device)
+        xModalPos_loss = torch.tensor([0.], device=emb1.device)
+        wModalPos_loss = torch.tensor([0.], device=emb1.device)
         for k in scores:
             loss, loss_debug = self.criterion(*scores[k])
-            if k in {'v2a', 'a2v'}:
-                xModal_loss += loss / 2. * self.xModalCoeff
-            if k in {'v2v', 'a2a'}:
-                wModal_loss += loss / 2. * self.wModalCoeff
+            if k in {'inst-v2a', 'inst-a2v'}:
+                xModalInst_loss += loss / 2. * self.xModalInstCoeff
+            elif k in {'inst-v2v', 'inst-a2a'}:
+                wModalInst_loss += loss / 2. * self.wModalInstCoeff
+            elif k in {'pos-v2a', 'pos-a2v'}:
+                xModalPos_loss += loss / 2. * self.xModalPosCoeff
+            elif k in {'pos-v2v', 'pos-a2a'}:
+                wModalPos_loss += loss / 2. * self.wModalPosCoeff
 
             # Metrics for tensorboard
             with torch.no_grad():
@@ -379,12 +402,9 @@ class AVID_CMA(nn.Module):
                 for mt in loss_debug:
                     loss_debug_all[f'{k}/{mt}'] = loss_debug[mt]
 
-        # Metrics for tensorboard
-        loss_debug_all['xModal/Avg'] = xModal_loss
-        loss_debug_all['wModal/Avg'] = wModal_loss
-
         # Compute final loss
-        total_loss = xModal_loss + wModal_loss
+        div = float(self.xModalInst) + float(self.wModalInst) + float(self.xModalPos) + float(self.wModalPos)
+        total_loss = (xModalInst_loss + wModalInst_loss + xModalPos_loss + wModalPos_loss) / div
         return total_loss, loss_debug_all
 
     def set_epoch(self, epoch):

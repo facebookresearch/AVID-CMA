@@ -1,15 +1,12 @@
 import os
 import json
-import numpy as np
-import torch.utils.data as data
 
 from datasets.video_dataset import VideoDataset
 from utils.ioutils import av_wrappers
 
 ROOT = '/datasets01_101/hmdb51/112018/'
 ANNO_DIR = '/datasets01_101/hmdb51/112018/splits/'
-CACHE_DIR = '/checkpoint/pmorgado/data_cache/hmdb51'
-
+CACHE_DIR = 'datasets/cache/hmdb51'
 
 def get_metadata():
     classes = [l.strip() for l in open('{}/classes.txt'.format(CACHE_DIR), 'r')]

@@ -10,7 +10,7 @@ test_freq: 1
 num_workers: 32
 
 benchmark:
-  name: "kinetics-linear-head-8at16"
+  name: "kinetics-linear-8at16"
 
 dataset:
   name: "kinetics"

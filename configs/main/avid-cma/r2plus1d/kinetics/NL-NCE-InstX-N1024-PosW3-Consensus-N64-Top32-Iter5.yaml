@@ -42,7 +42,7 @@ optimizer:
     name: "multistep"
     base_lr: 0.0002
     gamma: 1.
-    milestones: [5, 10, 15, 20]
+    milestones: [5, 10, 15]
 
 loss:
   name: "AVID_CMA"
@@ -53,21 +53,23 @@ loss:
     num_positives: 32
     num_negatives: 1024
     num_negatives_within: 64
-    xModal: false
-    wModal: true
-    wModalCoeff: 3.
+    xModalInst: true
+    wModalInst: false
+    xModalPos: false
+    wModalPos: true
+    wModalPosCoeff: 3.
     resample_freq: 5
     sampling_args:
       type: "consensus"      # consensus, video, audio, union
-      pos_k: 128
+      pos_k: 32
 
 model:
-  name: "NL-NCE-SelfX-N1024-PosW3-SelfConsensus-N64-Top32-Iter5"
+  name: "NL-NCE-InstX-N1024-PosW3-Consensus-N64-Top32-Iter5"
   model_dir: "checkpoints/AVID-CMA/Kinetics/R2Plus1D"
   arch: "av_wrapper"
   args:
-    proj_dim: [512, 512, 128]
     checkpoint: "checkpoints/AVID/Kinetics/R2Plus1D/Cross-N1024-NL/checkpoint-ep20.pth.tar"
+    proj_dim: [512, 512, 128]
     video_backbone: "R2Plus1D"
     video_backbone_args:
       depth: 18

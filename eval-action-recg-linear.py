@@ -56,7 +56,7 @@ def main_worker(gpu, ngpus, fold, args, cfg):
 
     ################################ Train ################################
     start_epoch, end_epoch = 0, cfg['optimizer']['num_epochs']
-    if cfg['resume'] and ckp_manager.checkpoint_exists(last=True):
+    if (cfg['resume'] or args.test_only) and ckp_manager.checkpoint_exists(last=True):
         start_epoch = ckp_manager.restore(model, optimizer, scheduler, restore_last=True)
         logger.add_line("Loaded checkpoint '{}' (epoch {})".format(ckp_manager.last_checkpoint_fn(), start_epoch))
 
