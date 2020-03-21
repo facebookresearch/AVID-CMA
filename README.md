@@ -32,19 +32,19 @@
      * `Iter5`: Number of epochs between positive set updates;
      * Model folder specified in the config.
 
-* Eval video network on UCF (Batch size configured for 2 gpus)
+* Eval video network on UCF (Trained on 2 gpus)
 
     ``
     python eval-action-recg.py configs/benchmark/ucf/r2plus1d/r2plus1d-wucls-8at16-fold1.yaml configs/main/avid/r2plus1d/kinetics/Cross-N1024-NL.yaml
     ``
 
-* Eval video network on Kinetics (Linear) (Batch size configured for 2 gpus)
+* Eval video network on Kinetics (Linear) (Trained on 2 gpus)
 
     ``
     python eval-action-recg-linear.py configs/benchmark/kinetics/r2plus1d/8x224x224-linear.yaml configs/main/avid/r2plus1d/kinetics/Cross-N1024-NL.yaml
     ``
 
-* Eval audio network on ESC (SVM) (Batch size configured for 1 gpu)
+* Eval audio network on ESC (SVM) (Trained on 1 gpu)
 
     ``
     python eval-snd-recg-svm.py configs/benchmark/esc50/audio-svm.yaml configs/main/avid/r2plus1d/kinetics/Cross-N1024-NL.yaml
@@ -66,29 +66,30 @@ fs3cmd sync -p s3://fairusersglobal/users/pmorgado/h2/private/home/pmorgado/AVID
 ``
 
 ### Experiments
-Config files used for each experiment.
+This section list the config files used for each experiment.
 
 * AVID
-  * Audioset-100k
-    * Non-Linear Head 
-      - `configs/main/avid/r2plus1d-small/audioset-100k/Cross-N1024-NL.yaml`
-      - `configs/main/avid/r2plus1d-small/audioset-100k/Joint-N1024-NL.yaml`
-      - `configs/main/avid/r2plus1d-small/audioset-100k/Self-N1024-NL.yaml`
-    * Linear Head 
-      - `configs/main/avid/r2plus1d-small/audioset-100k/Cross-N1024.yaml`
-      - `configs/main/avid/r2plus1d-small/audioset-100k/Joint-N1024.yaml`
-      - `configs/main/avid/r2plus1d-small/audioset-100k/Self-N1024.yaml`
-    * Kinetics
-      - `configs/main/avid/r2plus1d/kinetics/Cross-N1024.yaml`
-      - `configs/main/avid/r2plus1d/kinetics/Cross-N1024-NL.yaml`
-    * Audioset
-      - `configs/main/avid/r2plus1d/audioset/Cross-N1024.yaml`
-      - `configs/main/avid/r2plus1d/audioset/Cross-N1024-NL.yaml`
+    * Audioset-100k / R(2+1)D-Small (Trained on 2 gpus)
+        * Non-Linear Head
+            - `configs/main/avid/r2plus1d-small/audioset-100k/Cross-N1024-NL.yaml`
+            - `configs/main/avid/r2plus1d-small/audioset-100k/Joint-N1024-NL.yaml`
+            - `configs/main/avid/r2plus1d-small/audioset-100k/Self-N1024-NL.yaml`
+        * Linear Head 
+            - `configs/main/avid/r2plus1d-small/audioset-100k/Cross-N1024.yaml`
+            - `configs/main/avid/r2plus1d-small/audioset-100k/Joint-N1024.yaml`
+            - `configs/main/avid/r2plus1d-small/audioset-100k/Self-N1024.yaml`
+    * Kinetics / R(2+1)D-18 (Trained on 4 nodes)
+        - `configs/main/avid/r2plus1d/kinetics/Cross-N1024.yaml`
+        - `configs/main/avid/r2plus1d/kinetics/Cross-N1024-NL.yaml`
+    * Audioset / R(2+1)D-18 (Trained on 16 nodes)
+        - `configs/main/avid/r2plus1d/audioset/Cross-N1024.yaml`
+        - `configs/main/avid/r2plus1d/audioset/Cross-N1024-NL.yaml`
       
 * CMA
-  *  Parameter Sweeping on Audioset-100k
-    - `configs/main/avid-cma/r2plus2d-small/audioset-100k/linear-head`
-    - `configs/main/avid-cma/r2plus2d-small/audioset-100k/nonlinear-head`
-  *  Kinetics
-    - `configs/main/avid-cma/r2plus2d-small/audioset-100k/linear-head`
-    - `configs/main/avid-cma/r2plus2d-small/audioset-100k/nonlinear-head`
+    *  Parameter Sweeping on Audioset-100k / R(2+1)D-Small (Trained on 2 gpus)
+        - `configs/main/avid-cma/r2plus2d-small/audioset-100k/linear-head`
+        - `configs/main/avid-cma/r2plus2d-small/audioset-100k/nonlinear-head`
+    *  Kinetics / R(2+1)D-18 (Trained on 4 nodes)
+        - `configs/main/avid-cma/r2plus1d/kinetics/NL-NCE-SelfX-N1024-PosW3-SelfConsensus-N64-Top32-Iter5.yaml`
+    *  Audioset / R(2+1)D-18 (Trained on 16 nodes)
+        - `configs/main/avid-cma/r2plus1d/audioset/NL-NCE-SelfX-N1024-PosW3-SelfConsensus-N64-Top32-Iter5.yaml`
