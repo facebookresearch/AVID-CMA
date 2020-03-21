@@ -120,22 +120,21 @@ def main_worker(gpu, ngpus_per_node, args, cfg):
     cudnn.benchmark = True
 
     ############################ TRAIN #########################################
-    if not cfg['test_only']:
-        test_freq = cfg['test_freq'] if 'test_freq' in cfg else 1
-        for epoch in range(start_epoch, end_epoch):
-            if epoch in cfg['optimizer']['lr']['milestones']:
-                ckp_manager.save(epoch, model=model, train_criterion=train_criterion, optimizer=optimizer, filename='checkpoint-ep{}.pth.tar'.format(epoch))
-            if args.distributed:
-                train_loader.sampler.set_epoch(epoch)
-            scheduler.step(epoch)
-            train_criterion.set_epoch(epoch)
+    test_freq = cfg['test_freq'] if 'test_freq' in cfg else 1
+    for epoch in range(start_epoch, end_epoch):
+        if epoch in cfg['optimizer']['lr']['milestones']:
+            ckp_manager.save(epoch, model=model, train_criterion=train_criterion, optimizer=optimizer, filename='checkpoint-ep{}.pth.tar'.format(epoch))
+        if args.distributed:
+            train_loader.sampler.set_epoch(epoch)
+        scheduler.step(epoch)
+        train_criterion.set_epoch(epoch)
 
-            # Train for one epoch
-            logger.add_line('='*30 + ' Epoch {} '.format(epoch) + '='*30)
-            logger.add_line('LR: {}'.format(scheduler.get_lr()))
-            run_phase('train', train_loader, model, optimizer, train_criterion, epoch, args, cfg, logger, tb_writter)
-            if epoch % test_freq == 0 or epoch == end_epoch - 1:
-                ckp_manager.save(epoch+1, model=model, optimizer=optimizer, train_criterion=train_criterion)
+        # Train for one epoch
+        logger.add_line('='*30 + ' Epoch {} '.format(epoch) + '='*30)
+        logger.add_line('LR: {}'.format(scheduler.get_lr()))
+        run_phase('train', train_loader, model, optimizer, train_criterion, epoch, args, cfg, logger, tb_writter)
+        if epoch % test_freq == 0 or epoch == end_epoch - 1:
+            ckp_manager.save(epoch+1, model=model, optimizer=optimizer, train_criterion=train_criterion)
 
 
 def run_phase(phase, loader, model, optimizer, criterion, epoch, args, cfg, logger, tb_writter):

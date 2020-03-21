@@ -339,7 +339,7 @@ def build_model(feat_cfg, eval_cfg, eval_dir, args, logger):
     except KeyError:
         pretrained_net.load_state_dict({k.replace('module.', ''): ckp['model'][k] for k in ckp['model']})
 
-    # Wrap with linear classifiers
+    # Wrap with linear-head classifiers
     if eval_cfg['model']['name'] == 'ClassificationWrapper':
         model = ClassificationWrapper(feature_extractor=pretrained_net.video_model, **eval_cfg['model']['args'])
         ckp_manager = CheckpointManager(eval_dir, rank=args.gpu)

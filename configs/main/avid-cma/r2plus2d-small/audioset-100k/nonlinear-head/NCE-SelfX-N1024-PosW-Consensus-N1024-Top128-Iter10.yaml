@@ -1,21 +1,13 @@
 resume: true
-test_only: false
-num_workers: 36
-
-required_devices: 8
-no_test: false
-debug: false
+num_workers: 32
 log2tb: true
-allow_double_bs: false
 seed: 0
-distributed: false
-test_freq: 1
 print_freq: 100
 
 dataset:
   name: "audioset"
   full_res: false
-  batch_size: 256
+  batch_size: 224
   video_clip_duration: 0.5
   video_fps: 16.
   crop_size: 112
@@ -41,13 +33,13 @@ optimizer:
   lr:
     name: "multistep"
     base_lr: 0.0001
-    gamma: 0.1
-    milestones: [25, 50]
+    gamma: 1.
+    milestones: [25, 50, 75]
 
 loss:
   name: "AVID_CMA"
   args:
-    checkpoint: "checkpoints/AVID/Audioset-Small/R2Plus1D/Cross-N1024/checkpoint-ep75.pth.tar"
+    checkpoint: "checkpoints/AVID/Audioset-Small/R2Plus1D/Cross-N1024-NL/checkpoint-ep75.pth.tar"
     momentum: 0.5
     loss_type: 'nce'
     num_positives: 128
@@ -57,16 +49,16 @@ loss:
     wModal: true
     resample_freq: 10
     sampling_args:
-      type: "consensus"      # consensus, video, audio, union
+      type: "consensus"      # consensus, video, audio
       pos_k: 128
 
 model:
-  name: "NCE-SelfX-N1024-PosW-SelfConsensus-N1024-Top128-Iter10"
+  name: "NL-NCE-SelfX-N1024-PosW-SelfConsensus-N1024-Top128-Iter10"
   model_dir: "checkpoints/AVID-CMA/Audioset-Small/R2Plus1D"
   arch: "av_wrapper"
   args:
+    proj_dim: [512, 512, 128]
     checkpoint: "checkpoints/AVID/Audioset-Small/R2Plus1D/Cross-N1024/checkpoint-ep75.pth.tar"
-    proj_dim: 128
     video_backbone: "R2Plus1D_Small"
     video_backbone_args:
       depth: 10

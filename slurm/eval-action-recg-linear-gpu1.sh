@@ -15,4 +15,4 @@
 #SBATCH --partition=priority
 #SBATCH --comment="ECCV conference deadline."
 
-srun --label python eval-action-recg-linear.py $1 $2 $3 $4 $5 $6 $7 --quiet
+srun --label python eval-action-recg-linear-head.py $1 $2 $3 $4 $5 $6 $7 --quiet

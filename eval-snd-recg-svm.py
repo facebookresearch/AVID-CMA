@@ -82,7 +82,7 @@ def main_worker(fold, args, cfg):
     acc = {}
     for k in cfg['model']['feat_names']:
         clf = OneVsRestClassifier(LinearSVC(C=cfg['model']['C'], loss='squared_hinge', intercept_scaling=1.0, random_state=0, tol=0.0001, max_iter=200, verbose=1), n_jobs=-1)
-        # clf = OneVsRestClassifier(SVC(kernel='linear', C=cfg['model']['C'], random_state=0, tol=0.0001, max_iter=2000), n_jobs=-1)
+        # clf = OneVsRestClassifier(SVC(kernel='linear-head', C=cfg['model']['C'], random_state=0, tol=0.0001, max_iter=2000), n_jobs=-1)
         scaler = StandardScaler()
 
         logger.add_line('\n'+'='*60+'\nFitting SVM to {}'.format(k))

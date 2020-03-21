@@ -112,7 +112,7 @@ def prep_environment(args, cfg):
     # Prepare loggers (must be configured after initialize_distributed_backend())
     model_dir = '{}/{}'.format(cfg['model']['model_dir'], cfg['model']['name'])
     if args.rank == 0:
-        prep_output_folder(model_dir, cfg['test_only'])
+        prep_output_folder(model_dir, False)
     log_fn = '{}/train.log'.format(model_dir)
     logger = Logger(quiet=args.quiet, log_fn=log_fn, rank=args.rank)
 
