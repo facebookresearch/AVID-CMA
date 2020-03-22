@@ -50,7 +50,7 @@ loss:
     checkpoint: "checkpoints/AVID/Kinetics/R2Plus1D/Cross-N1024-NL/checkpoint-ep20.pth.tar"
     momentum: 0.5
     loss_type: 'nce'
-    num_positives: 32
+    num_positives: 128
     num_negatives: 1024
     num_negatives_within: 64
     xModalInst: true
@@ -61,10 +61,10 @@ loss:
     resample_freq: 5
     sampling_args:
       type: "consensus"      # consensus, video, audio, union
-      pos_k: 32
+      pos_k: 128
 
 model:
-  name: "NL-NCE-InstX-N1024-PosW3-Consensus-N64-Top32-Iter5"
+  name: "NL-NCE-InstX-N1024-PosW3-Consensus-N64-Top128-Iter5"
   model_dir: "checkpoints/AVID-CMA/Kinetics/R2Plus1D"
   arch: "av_wrapper"
   args:

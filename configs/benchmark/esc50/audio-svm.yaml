@@ -47,5 +47,5 @@ model:
   name: "lreg_classifier"
   n_classes: 50
   feat_names: ["conv5x", "conv4x", "conv3x", "conv2x"]
-  pooling_ops: ["AdaptiveAvgPool2d((3, 5))", "AdaptiveAvgPool2d((5, 7))", "AdaptiveAvgPool2d((7, 9))", "AdaptiveAvgPool2d((10, 14))"]
-  C: 1.0
+  pooling_ops: ["AdaptiveAvgPool2d((4, 4))", "AdaptiveAvgPool2d((6, 6))", "AdaptiveAvgPool2d((8, 8))", "AdaptiveAvgPool2d((12, 12))"]
+  C: 10.0

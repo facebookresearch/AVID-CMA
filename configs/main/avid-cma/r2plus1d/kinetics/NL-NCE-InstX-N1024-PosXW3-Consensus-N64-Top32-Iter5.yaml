@@ -55,7 +55,7 @@ loss:
     num_negatives_within: 64
     xModalInst: true
     wModalInst: false
-    xModalPos: false
+    xModalPos: true
     wModalPos: true
     wModalPosCoeff: 3.
     resample_freq: 5
@@ -64,7 +64,7 @@ loss:
       pos_k: 32
 
 model:
-  name: "NL-NCE-InstX-N1024-PosW3-Consensus-N64-Top32-Iter5"
+  name: "NL-NCE-InstX-N1024-PosXW3-Consensus-N64-Top32-Iter5"
   model_dir: "checkpoints/AVID-CMA/Kinetics/R2Plus1D"
   arch: "av_wrapper"
   args:

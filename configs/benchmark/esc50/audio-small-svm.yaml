@@ -48,4 +48,4 @@ model:
   n_classes: 50
   feat_names: ["block4", "block3", "block2", "block1"]
   pooling_ops: ["AdaptiveAvgPool2d((4, 4))", "AdaptiveAvgPool2d((6, 6))", "AdaptiveAvgPool2d((8, 8))", "AdaptiveAvgPool2d((12, 12))"]
-  C: 1.0
+  C: 10.0

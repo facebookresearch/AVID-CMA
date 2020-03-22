@@ -10,7 +10,7 @@ META = '/checkpoint/pmorgado/ESC-50/meta'
 
 
 def wav_loader(filename, rate=None, start_time=0, duration=None):
-    _, (data, sr) =  av_wrappers.av_loader2(filename, audio_fps=rate, start_time=start_time, duration=duration, return_video=False, return_audio=True)
+    _, (data, sr) =  av_wrappers.av_loader(filename, audio_fps=rate, start_time=start_time, duration=duration, return_video=False, return_audio=True)
     return data, sr
 
 
@@ -118,8 +118,8 @@ class ESC50(data.Dataset):
 
         # Load audio
         path = self.filenames[clip_idx].decode('utf-8')
-        # rate = self.rate * random.uniform(0.9, 1.1) if self.augment else self.rate
-        rate = self.rate
+        rate = self.rate * random.uniform(3./4., 4./3.) if self.augment else self.rate
+        # rate = self.rate
         sig, rate = wav_loader(path, rate, start_time=0, duration=4.9)
 
         rate = self.rate

@@ -52,7 +52,7 @@ loss:
     loss_type: 'nce'
     num_positives: 32
     num_negatives: 1024
-    num_negatives_within: 64
+    num_negatives_within: 1024
     xModalInst: true
     wModalInst: false
     xModalPos: false
@@ -64,7 +64,7 @@ loss:
       pos_k: 32
 
 model:
-  name: "NL-NCE-InstX-N1024-PosW3-Consensus-N64-Top32-Iter5"
+  name: "NL-NCE-InstX-N1024-PosW3-Consensus-N1024-Top32-Iter5"
   model_dir: "checkpoints/AVID-CMA/Kinetics/R2Plus1D"
   arch: "av_wrapper"
   args:

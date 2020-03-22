@@ -57,14 +57,14 @@ loss:
     wModalInst: false
     xModalPos: false
     wModalPos: true
-    wModalPosCoeff: 3.
+    wModalPosCoeff: 10.
     resample_freq: 5
     sampling_args:
       type: "consensus"      # consensus, video, audio, union
       pos_k: 32
 
 model:
-  name: "NL-NCE-InstX-N1024-PosW3-Consensus-N64-Top32-Iter5"
+  name: "NL-NCE-InstX-N1024-PosW10.-Consensus-N64-Top32-Iter5"
   model_dir: "checkpoints/AVID-CMA/Kinetics/R2Plus1D"
   arch: "av_wrapper"
   args:

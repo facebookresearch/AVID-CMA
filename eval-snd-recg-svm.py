@@ -76,24 +76,31 @@ def main_worker(fold, args, cfg):
     Xtr, Ytr = extract_features(model, train_loader, cfg['model']['feat_names'], pooling_ops=cfg['model']['pooling_ops'], logger=logger)
     Xte, Yte = extract_features(model, dense_loader, cfg['model']['feat_names'], pooling_ops=cfg['model']['pooling_ops'], dense=True, logger=logger)
 
+    mu = {k: Xtr[k].mean(0, keepdims=True) for k in Xtr}
+    std = {k: Xtr[k].std(0, keepdims=True) for k in Xtr}
+    Xtr = {k: (Xtr[k] - mu[k]) / (std[k] + 1e-2) for k in Xtr}
+    Xte = {k: (Xte[k] - mu[k]) / (std[k] + 1e-2) for k in Xte}
+
     from sklearn.svm import LinearSVC, SVC
     from sklearn.multiclass import OneVsRestClassifier
     from sklearn.preprocessing import StandardScaler
 
     acc = {}
     for k in cfg['model']['feat_names']:
-        clf = OneVsRestClassifier(LinearSVC(C=cfg['model']['C'], loss='linear', intercept_scaling=1.0, random_state=0, tol=0.0001, max_iter=200, verbose=1), n_jobs=-1)
+        clf = OneVsRestClassifier(LinearSVC(C=cfg['model']['C'], loss='hinge', intercept_scaling=1.0, random_state=0, tol=0.0001, max_iter=200, verbose=1), n_jobs=-1)
         # clf = OneVsRestClassifier(SVC(kernel='linear', C=cfg['model']['C'], random_state=0, tol=0.0001, max_iter=2000), n_jobs=-1)
-        scaler = StandardScaler()
+        # scaler = StandardScaler()
 
         logger.add_line('\n'+'='*60+'\nFitting SVM to {}'.format(k))
-        scaler.fit(Xtr[k])
+        # scaler.fit(Xtr[k])
 
-        clf.fit(scaler.transform(Xtr[k]), Ytr)
+        # clf.fit(scaler.transform(Xtr[k]), Ytr)
+        clf.fit(Xtr[k], Ytr)
 
         logger.add_line('Evaluating'.format(k))
         bs, nt, nf = Xte[k].shape
-        Ste = clf.decision_function(scaler.transform(Xte[k].reshape(bs*nt, nf))).reshape(bs, nt, cfg['model']['n_classes'])
+        # Ste = clf.decision_function(scaler.transform(Xte[k].reshape(bs*nt, nf))).reshape(bs, nt, cfg['model']['n_classes'])
+        Ste = clf.decision_function(Xte[k].reshape(bs*nt, nf)).reshape(bs, nt, cfg['model']['n_classes'])
         Pte = Ste.mean(1).argmax(1)
         acc[k] = (Yte == Pte).mean()*100
         logger.add_line('{}: {}'.format(k, acc[k]))
@@ -134,7 +141,7 @@ def build_dataloader(db_cfg, split_cfg, fold, num_workers):
             duration=db_cfg['clip_duration'],
             augment=split_cfg['use_augmentation'],
             missing_as_zero=True),
-        preprocessing.SpectrogramLibrosa2(
+        preprocessing.LogSpectrogram(
             db_cfg['audio_fps'],
             n_fft=db_cfg['n_fft'],
             hop_size=1. / db_cfg['spectrogram_fps'],

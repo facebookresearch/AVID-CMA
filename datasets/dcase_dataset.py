@@ -113,7 +113,7 @@ class DCASE(data.Dataset):
 
         # Load audio
         path = '{}/{}'.format(self.root, self.filenames[clip_idx].decode('utf-8'))
-        rate = self.rate * random.uniform(0.6, 1.4) if self.augment else self.rate
+        rate = self.rate * random.uniform(3./4., 4./3.) if self.augment else self.rate
         sig, rate = wav_loader(path, rate, start_time=ss, duration=duration*2)
 
         rate = self.rate
